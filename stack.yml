@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  mqtt:
+    image: eclipse-mosquitto
+    ports:
+      - 1883:1883
+    networks:
+      - adapter-mqtt-network
+    volumes:
+      - ./conf/mosquitto.conf:/mosquitto/config/mosquitto.conf
+  
+  adapter:
+    image: adapter
+    depends_on:
+      - mqtt
+      - database
+    env_file:
+      - conf/adapter.env
+    networks:
+      - adapter-mqtt-network
+      - adapter-database-network
+    tty: true
+
+  database:
+    image: influxdb:1.8
+    volumes:
+      - influxdb-database:/var/lib/influxdb
+    networks:
+      - adapter-database-network
+      - grafana-database-network
+
+  grafana:
+    image: grafana/grafana
+    depends_on:
+      - database
+    env_file:
+      - conf/grafana.env
+    ports:
+      - 80:3000
+    volumes:
+      - grafana-database:/var/lib/grafana
+      - ./grafana/dashboards:/etc/grafana/dashboards 
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    networks:
+      - grafana-database-network
+
+networks:
+  adapter-mqtt-network: {}
+  adapter-database-network: {}
+  grafana-database-network: {}
+
+volumes:
+  influxdb-database:
+    driver: local
+  grafana-database:
+    driver: local
+
+  
+
